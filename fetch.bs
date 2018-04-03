@@ -299,13 +299,6 @@ specialized multimap. An ordered list of key-value pairs with potentially duplic
 (<var>name</var>) if <var>list</var> contains a <a for=/>header</a> whose <a for=header>name</a> is
 a <a>byte-case-insensitive</a> match for <var>name</var>.
 
-<p>A <a for=/>header list</a> has an associated
-<dfn export for="header list" id=concept-header-list-allow-privileged-headers>allow privileged headers flag</dfn>.
-Unless stated otherwise it is unset.
-
-<p class="note no-backref">This should be set by APIs that want to send one of the
-<a>privileged request-headers</a>. This flag is unset if the request is modified by the developer.
-
 <p>To <dfn export for="header list" id=concept-header-list-append>append</dfn> a
 <a for=header>name</a>/<a for=header>value</a> (<var>name</var>/<var>value</var>) pair to a
 <a for=/>header list</a> (<var>list</var>), run these steps:
@@ -460,8 +453,8 @@ a <a>byte-case-insensitive</a> match for one of
  <li>`<code>Range</code>`
 </ul>
 
-<p class="note no-backref">These are headers that may be set carefully by APIs, but it would be
-dangerous to allow developers to set this header themselves.
+<p class="note no-backref">It would be dangerous to allow developers to set these headers themselves
+without a preflight, but some APIs set them for no-cors requests.
 
 <p>A <dfn export>CORS-safelisted response-header name</dfn>, given a
 <a for=response>CORS-exposed header-name list</a> <var>list</var>, is a <a for=/>header</a>
@@ -1296,26 +1289,26 @@ or "<code>worker</code>".
 
 <hr>
 
-<p>To <dfn export for=request id=concept-request-add-range-header>add a range header</dfn> for a <a
-for=/>request</a> <var>request</var>, an integer <var>start</var>, and an optional integer
-<var>end</var>, run these steps:
+<p>To <dfn export for=request id=concept-request-add-range-header>add a range header</dfn> to a <a
+for=/>request</a> <var>request</var>, with an integer <var>first</var>, and an optional integer
+<var>last</var>, run these steps:
 
 <ol>
- <li><p>Set <var>request</var>'s <a for=request>header list</a>'s <a for="header list">allow
- privileged headers flag</a>.
-
  <li><p>Let <var>rangeValue</var> be `<code>bytes </code>`.
 
- <li><p><a>Encode</a> <var>start</var> and append the result to <var>rangeValue</var>.
+ <li><p><a>Encode</a> <var>first</var> and append the result to <var>rangeValue</var>.
 
  <li><p>Append `<code>-</code>` to <var>rangeValue</var>.
 
- <li><p>If <var>end</var> is provided, <a>encode</a> it and append the result to
+ <li><p>If <var>last</var> is provided, <a>encode</a> it and append the result to
  <var>rangeValue</var>.
 
  <li><p><a for="header list">Append</a> `<code>Range</code>`/<var>rangeValue</var> to
  <var>request</var>'s <a for=request>header list</a>.
 </ol>
+
+<p class=note>Ranges are inlusive. A range where <var>first</var> is 0 and <var>last</var> is
+500, is 501 bytes.
 
 <h4 id=responses>Responses</h4>
 
@@ -4465,6 +4458,10 @@ objects.</span>
 "<code>response</code>" or
 "<code>none</code>".
 
+<p>A {{Headers}} object also has an associated
+<dfn for=Headers id=concept-headers-allow-privileged-request-headers>allow privileged no-cors headers flag</dfn>.
+Unless stated otherwise it is unset.
+
 <p>To <dfn export for=Headers id=concept-headers-append>append</dfn> a
 <a for=header>name</a>/<a for=header>value</a>
 (<var>name</var>/<var>value</var>) pair to a
@@ -4488,16 +4485,12 @@ objects.</span>
   <var>name</var>/<var>value</var> is not a <a>CORS-safelisted request-header</a>, then:
 
   <ol>
-   <li><p>If <var>headers</var>'s <a for=Headers>header list</a>'s <a for="header list">allow
-   privileged headers flag</a> is unset, return.
+   <li><p>If <var>headers</var>'s <a for=Headers>allow privileged no-cors headers flag</a> is unset,
+   return.
 
    <li><p>If <var>name</var>/<var>value</var> is not a <a>privileged request-header</a>, return.
   </ol>
  </li>
-
- <li><p>Otherwise, if <a for=Headers>guard</a> is
- "<code>request-no-cors</code>" and <var>name</var>/<var>value</var> is not a
- <a>CORS-safelisted request-header</a>, return.
 
  <li><p>Otherwise, if <a for=Headers>guard</a> is
  "<code>response</code>" and <var>name</var> is a
@@ -4530,6 +4523,29 @@ run these steps:
  <var>key</var>/<var>value</var> to <var>headers</var>.
 </ol>
 
+<p>To <dfn for=Headers id=concept-headers-unprivilege>unprivilege</dfn> a
+{{Headers}} object (<var>headers</var>), run these steps:
+
+<ol>
+ <li><p>If <var>headers</var>'s <a for=Headers>allow privileged no-cors headers flag</a> is unset,
+ return.
+
+ <li><p>Unset <var>headers</var>'s <a for=Headers>allow privileged no-cors headers flag</a>.
+
+ <li><p>Assert: <var>headers</var>'s <a for=Headers>guard</a> is "<code>request-no-cors</code>".
+
+ <li>
+  <p><a for="list">For each</a> <var>header</var> of <var>headers</var>'s
+  <a for=Headers>header list</a>:
+
+  <ol>
+   <li><p>If <var>header</var> is a <a>privileged request-header</a>, then remove <var>header</var>
+   from <var>headers</var>'s <a for=Headers>header list</a>.
+  </ol>
+</ol>
+
+<p class=note>This is called when a request is modified by unprivileged code.
+
 <p>The
 <dfn id=dom-headers export for=Headers constructor><code>Headers(<var>init</var>)</code></dfn>
 constructor, when invoked, must run these steps:
@@ -4551,8 +4567,7 @@ method, when invoked, must run these steps:
  <li><p><a for=Headers>append</a> <var>name</var>/<var>value</var> to <a>context object</a> and
  rethrow any exception.
 
- <li><p>Unset <a>context object</a>'s <a for=Headers>header list</a>'s
- <a for="header list">allow privileged headers flag</a>.
+ <li><p><a for=Headers>Unprivilege</a> <a>context object</a>.
 </ol>
 
 <p>The <dfn export for=Headers method><code>delete(<var>name</var>)</code></dfn>
@@ -4583,8 +4598,7 @@ method, when invoked, must run these steps:
  <li><p><a for="header list">Delete</a> <var>name</var> from
  <a for=Headers>header list</a>.
 
- <li><p>Unset <a>context object</a>'s <a for=Headers>header list</a>'s
- <a for="header list">allow privileged headers flag</a>.
+ <li><p><a for=Headers>Unprivilege</a> <a>context object</a>.
 </ol>
 
 <p>The <dfn export for=Headers method><code>get(<var>name</var>)</code></dfn> method, when
@@ -4641,8 +4655,7 @@ method, when invoked, must run these steps:
  <var>name</var>/<var>value</var> in
  <a for=Headers>header list</a>.
 
- <li><p>Unset <a>context object</a>'s <a for=Headers>header list</a>'s
- <a for="header list">allow privileged headers flag</a>.
+ <li><p><a for=Headers>Unprivilege</a> <a>context object</a>.
 </ol>
 
 <p>The <a>value pairs to iterate over</a> are the return value of running
@@ -5177,42 +5190,47 @@ constructor must run these steps:
  <li><p>If <var>init</var>'s <code>window</code> member is present, set
  <var>window</var> to "<code>no-window</code>".
 
- <li><p>Set <var>request</var> to a new <a for=/>request</a>
- whose <a for=request>url</a> is <var>request</var>'s
- <a for=request>current url</a>,
- <a for=request>method</a> is <var>request</var>'s
- <a for=request>method</a>,
- <a for=request>header list</a> is a copy of
- <var>request</var>'s <a for=request>header list</a>,
- <a>unsafe-request flag</a> is set,
- <a for=request>client</a> is
- <a>current settings object</a>,
- <a for=request>window</a> is <var>window</var>,
- <a for=request>origin</a> is "<code>client</code>",
- <a for=request>referrer</a> is <var>request</var>'s
- <a for=request>referrer</a>,
- <a for=request>referrer policy</a> is
- <var>request</var>'s
- <a for=request>referrer policy</a>,
- <a for=request>mode</a> is <var>request</var>'s
- <a for=request>mode</a>,
- <a for=request>credentials mode</a> is
- <var>request</var>'s
- <a for=request>credentials mode</a>,
- <a for=request>cache mode</a> is
- <var>request</var>'s
- <a for=request>cache mode</a>,
- <a for=request>redirect mode</a> is
- <var>request</var>'s
- <a for=request>redirect mode</a>,
- <a for=request>integrity metadata</a> is
- <var>request</var>'s
- <a for=request>integrity metadata</a>, and
- <a>keepalive flag</a> is <var>request</var>'s <a>keepalive flag</a>.
+ <li>
+  <p>Set <var>request</var> to a new <a for=/>request</a> with the following properties:
 
+  <dl>
+   <dt><a for=request>url</a> <dd><var>request</var>'s <a for=request>current url</a>.
+
+   <dt><a for=request>method</a> <dd><var>request</var>'s <a for=request>method</a>.
+
+   <dt><a for=request>header list</a> <dd>A copy of <var>request</var>'s
+   <a for=request>header list</a>.
+
+   <dt><a>unsafe-request flag</a> <dd>Set.
+
+   <dt><a for=request>client</a> <dd><a>Current settings object</a>.
+
+   <dt><a for=request>window</a> <dd><var>window</var>.
+
+   <dt><a for=request>origin</a> <dd>"<code>client</code>".
+
+   <dt><a for=request>referrer</a> <dd><var>request</var>'s <a for=request>referrer</a>.
+
+   <dt><a for=request>referrer policy</a> <dd><var>request</var>'s
+   <a for=request>referrer policy</a>.
+
+   <dt><a for=request>mode</a> <dd><var>request</var>'s <a for=request>mode</a>.
+
+   <dt><a for=request>credentials mode</a> <dd><var>request</var>'s
+   <a for=request>credentials mode</a>.
+
+   <dt><a for=request>cache mode</a> <dd><var>request</var>'s <a for=request>cache mode</a>.
+
+   <dt><a for=request>redirect mode</a> <dd><var>request</var>'s <a for=request>redirect mode</a>.
+
+   <dt><a for=request>integrity metadata</a> <dd><var>request</var>'s
+   <a for=request>integrity metadata</a>.
+
+   <dt><a>keepalive flag</a> <dd><var>request</var>'s <a>keepalive flag</a>.
+  </dl>
 
  <li>
-  <p>If any of <var>init</var>'s members are present, run these substeps:
+  <p>If any of <var>init</var>'s members are present, then:
 
   <ol>
    <li><p>If <var>request</var>'s <a for=request>mode</a> is
@@ -5233,9 +5251,6 @@ constructor must run these steps:
     original source could therefore be exploited were this not done, although that is somewhat
     farfetched.
    </li>
-
-   <li><p>Unset <var>request</var>'s <a for=request>header list</a>'s
-   <a for="header list">allow privileged headers flag</a>.
   </ol>
 
  <li>
@@ -5364,6 +5379,11 @@ constructor must run these steps:
 
    <li><p>Set <var>r</var>'s <a for=Request>headers</a>'s <a for=Headers>guard</a> to
    "<code>request-no-cors</code>".
+
+   <li><p>If <var>input</var> is a {{Request}} object, and none of <var>init</var>'s members are
+   present, and <var>input</var>'s <a for=Request>headers</a>'s
+   <a for=Headers>allow privileged no-cors headers flag</a> is set, then set <var>r</var>'s
+   <a for=Request>headers</a>'s <a for=Headers>allow privileged no-cors headers flag</a>.
   </ol>
 
  <li><p>If <var>headers</var> is a <code>Headers</code> object, then <a for=list>for each</a>
@@ -5522,10 +5542,26 @@ run these steps:
 
  <li><p>Set <var>clonedRequestObject</var>'s <a for=Request>request</a> to <var>clonedRequest</var>.
 
- <li><p>Set <var>clonedRequestObject</var>'s <a for=Request>headers</a> to a new {{Headers}} object
- whose <a for=Headers>header list</a> is set to <var>clonedRequest</var>'s
- <a for=Headers>header list</a>, and <a for=Headers>guard</a> is <a>context object</a>'s
- <a for=Request>headers</a>' <a for=Headers>guard</a>.
+ <li><p>Let <var>clonedHeaders</var> be a new {{Headers}} object.
+
+ <li><p>Set <var>clonedHeaders</var>' <a for=Headers>header list</a> to <var>clonedRequest</var>'s
+ <a for=Headers>header list</a>.
+
+ <li>
+  <p>Set <var>clonedRequestObject</var>'s <a for=Request>headers</a> to a new {{Headers}} object
+  whose:
+
+  <ul>
+   <li><p><a for=Headers>header list</a> is set to <var>clonedRequest</var>'s
+   <a for=Headers>header list</a>.
+
+   <li><p><a for=Headers>guard</a> is <a>context object</a>'s <a for=Request>headers</a>'s
+   <a for=Headers>guard</a>.
+
+   <li><p><a for=Headers>allow privileged no-cors headers flag</a> is set if <a>context object</a>'s
+   <a for=Request>headers</a>'s <a for=Headers>allow privileged no-cors headers flag</a> is set.
+  </ul>
+ </li>
 
  <li><p>Make <var>clonedRequestObject</var>'s <a for=Request>signal</a>
  <a for=AbortSignal>follow</a> <a>context object</a>'s <a for=Request>signal</a>.
@@ -5749,7 +5785,7 @@ run these steps:
  <li><p>Set <var>clonedResponseObject</var>'s <a for=Request>headers</a> to a new {{Headers}} object
  whose <a for=Headers>header list</a> is set to <var>clonedResponse</var>'s
  <a for=Headers>header list</a>, and <a for=Headers>guard</a> is <a>context object</a>'s
- <a for=Response>headers</a>' <a for=Headers>guard</a>.
+ <a for=Response>headers</a>'s <a for=Headers>guard</a>.
 
  <li><p>Upon fulfillment of <a>context object</a>'s <a for=Response>trailer promise</a>, resolve
  <var>clonedResponseObject</var>'s <a for=Response>trailer promise</a> with a new {{Headers}} object
