@@ -5559,11 +5559,6 @@ run these steps:
 
  <li><p>Set <var>clonedRequestObject</var>'s <a for=Request>request</a> to <var>clonedRequest</var>.
 
- <li><p>Let <var>clonedHeaders</var> be a new {{Headers}} object.
-
- <li><p>Set <var>clonedHeaders</var>' <a for=Headers>header list</a> to <var>clonedRequest</var>'s
- <a for=Headers>header list</a>.
-
  <li>
   <p>Set <var>clonedRequestObject</var>'s <a for=Request>headers</a> to a new {{Headers}} object
   whose:
