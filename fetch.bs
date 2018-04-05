@@ -446,15 +446,16 @@ documented in <a href=#cors-protocol-exceptions>CORS protocol exceptions</a>.
 <p>A <dfn export>CORS non-wildcard request-header name</dfn> is a <a>byte-case-insensitive</a> match
 for `<code>Authorization</code>`.
 
-<p>A <dfn export>privileged request-header</dfn> is a <a>header</a> whose <a for=header>name</a> is
-a <a>byte-case-insensitive</a> match for one of
+<p>A <dfn export>privileged request-header name</dfn> is a <a for=/>header</a>
+<a for=header>name</a> that is a <a>byte-case-insensitive</a> match for one of
 
 <ul class=brief>
  <li>`<code>Range</code>`
 </ul>
 
-<p class="note no-backref">It would be dangerous to allow developers to set these headers themselves
-without a preflight, but some APIs set them for no-cors requests.
+<p class="note no-backref">These are headers that <span class=allow-2119>may</span> be set by
+privileged APIs, and will be preserved if their associated request object is copied, but will be
+removed if the request is modified in any way.
 
 <p>A <dfn export>CORS-safelisted response-header name</dfn>, given a
 <a for=response>CORS-exposed header-name list</a> <var>list</var>, is a <a for=/>header</a>
@@ -4458,10 +4459,6 @@ objects.</span>
 "<code>response</code>" or
 "<code>none</code>".
 
-<p>A {{Headers}} object also has an associated
-<dfn for=Headers id=concept-headers-allow-privileged-request-headers>allow privileged no-cors headers flag</dfn>.
-Unless stated otherwise it is unset.
-
 <p>To <dfn export for=Headers id=concept-headers-append>append</dfn> a
 <a for=header>name</a>/<a for=header>value</a>
 (<var>name</var>/<var>value</var>) pair to a
@@ -4478,29 +4475,21 @@ Unless stated otherwise it is unset.
 
  <li><p>Otherwise, if <a for=Headers>guard</a> is
  "<code>request</code>" and <var>name</var> is a <a>forbidden header name</a>,
- return false.
+ return.
 
- <li>
-  <p>Otherwise, if <a for=Headers>guard</a> is "<code>request-no-cors</code>" and
-  <var>name</var>/<var>value</var> is not a <a>CORS-safelisted request-header</a>, then:
-
-  <ol>
-   <li><p>If <var>headers</var>'s <a for=Headers>allow privileged no-cors headers flag</a> is unset,
-   return false.
-
-   <li><p>If <var>name</var> is not a <a>privileged request-header</a>, return false.
-  </ol>
- </li>
+ <li><p>Otherwise, if <a for=Headers>guard</a> is "<code>request-no-cors</code>" and
+ <var>name</var>/<var>value</var> is not a <a>CORS-safelisted request-header</a>, return.
 
  <li><p>Otherwise, if <a for=Headers>guard</a> is
  "<code>response</code>" and <var>name</var> is a
- <a>forbidden response-header name</a>, return false.
+ <a>forbidden response-header name</a>, return.
 
  <li><p><a for="header list">Append</a>
  <var>name</var>/<var>value</var> to
  <a for=Headers>header list</a>.
 
- <li><p>Return true.
+ <li><p>If <var>headers</var>'s <a for=Headers>guard</a> is "<code>request-no-cors</code>", then
+ <a for=Headers>remove privilaged request headers</a> from <var>headers</var>.
 </ol>
 
 <p>To <dfn export for=Headers id=concept-headers-fill>fill</dfn> a
@@ -4525,28 +4514,21 @@ run these steps:
  <var>key</var>/<var>value</var> to <var>headers</var>.
 </ol>
 
-<p>To <dfn for=Headers id=concept-headers-unprivilege>unprivilege</dfn> a
-{{Headers}} object (<var>headers</var>), run these steps:
+<p>To
+<dfn for=Headers id=concept-headers-remove-privilaged-request-headers>remove privilaged request headers</dfn>
+from a {{Headers}} object (<var>headers</var>), run these steps:
 
 <ol>
- <li><p>If <var>headers</var>'s <a for=Headers>allow privileged no-cors headers flag</a> is unset,
- return.
+ <li><p><a for="list">For each</a> <var>header</var> of <var>headers</var>'s
+ <a for=Headers>header list</a>:
 
- <li><p>Unset <var>headers</var>'s <a for=Headers>allow privileged no-cors headers flag</a>.
-
- <li><p>Assert: <var>headers</var>'s <a for=Headers>guard</a> is "<code>request-no-cors</code>".
-
- <li>
-  <p><a for="list">For each</a> <var>header</var> of <var>headers</var>'s
-  <a for=Headers>header list</a>:
-
-  <ol>
-   <li><p>If <var>header</var> is a <a>privileged request-header</a>, then remove <var>header</var>
-   from <var>headers</var>'s <a for=Headers>header list</a>.
-  </ol>
+ <ol>
+  <li><p>If <var>header</var>'s <a for=header>name</a> is a <a>privileged request-header name</a>,
+  then remove <var>header</var> from <var>headers</var>'s <a for=Headers>header list</a>.
+ </ol>
 </ol>
 
-<p class=note>This is called when a request is modified by unprivileged code.
+<p class=note>This is called when headers are modified by unprivileged code.
 
 <p>The
 <dfn id=dom-headers export for=Headers constructor><code>Headers(<var>init</var>)</code></dfn>
@@ -4563,15 +4545,8 @@ constructor, when invoked, must run these steps:
 </ol>
 
 <p>The <dfn export for=Headers method><code>append(<var>name</var>, <var>value</var>)</code></dfn>
-method, when invoked, must run these steps:
-
-<ol>
- <li><p>Let <var>appendResult</var> be the result of <a for=Headers lt=append>appending</a>
- <var>name</var>/<var>value</var> to <a>context object</a> and rethrow any exception.
-
- <li><p>If <var>appendResult</var> is true, then <a for=Headers>Unprivilege</a>
- <a>context object</a>.
-</ol>
+method, when invoked, must <a for=Headers>append</a> <var>name</var>/<var>value</var> to
+<a>context object</a>.
 
 <p>The <dfn export for=Headers method><code>delete(<var>name</var>)</code></dfn>
 method, when invoked, must run these steps:
@@ -4587,19 +4562,12 @@ method, when invoked, must run these steps:
  "<code>request</code>" and <var>name</var> is a <a>forbidden header name</a>,
  return.
 
- <li>
-  <p>Otherwise, if <a for=Headers>guard</a> is "<code>request-no-cors</code>" and
-  <var>name</var>/`<code>invalid</code>` is not a <a>CORS-safelisted request-header</a>, then:
+ <li><p>Otherwise, if <a for=Headers>guard</a> is "<code>request-no-cors</code>" and
+ <var>name</var>/`<code>invalid</code>` is not a <a>CORS-safelisted request-header</a>, and
+ <var>name</var> is not a <a>privileged request-header name</a>, then return.
 
   <p class=note>`<code>invalid</code>` is used because
   <a method for=Headers><code>delete()</code></a> is not passed a value as argument.
-
-  <ol>
-   <li><p>If <a for=Headers>allow privileged no-cors headers flag</a> is unset, return.
-
-   <li><p>If <var>name</var>/<var>value</var> is not a <a>privileged request-header</a>, return.
-  </ol>
- </li>
 
  <li><p>Otherwise, if <a for=Headers>guard</a> is
  "<code>response</code>" and <var>name</var> is a
@@ -4608,7 +4576,8 @@ method, when invoked, must run these steps:
  <li><p><a for="header list">Delete</a> <var>name</var> from
  <a for=Headers>header list</a>.
 
- <li><p><a for=Headers>Unprivilege</a> <a>context object</a>.
+ <li><p>If <a for=Headers>guard</a> is "<code>request-no-cors</code>", then
+ <a for=Headers>remove privilaged request headers</a> from <a>context object</a>.
 </ol>
 
 <p>The <dfn export for=Headers method><code>get(<var>name</var>)</code></dfn> method, when
@@ -4653,16 +4622,8 @@ method, when invoked, must run these steps:
  "<code>request</code>" and <var>name</var> is a <a>forbidden header name</a>,
  return.
 
- <li>
-  <p>Otherwise, if <a for=Headers>guard</a> is "<code>request-no-cors</code>" and
-  <var>name</var>/<var>value</var> is not a <a>CORS-safelisted request-header</a>, then:
-
-  <ol>
-   <li><p>If <a for=Headers>allow privileged no-cors headers flag</a> is unset, return.
-
-   <li><p>If <var>name</var> is not a <a>privileged request-header</a>, return.
-  </ol>
- </li>
+ <li><p>Otherwise, if <a for=Headers>guard</a> is "<code>request-no-cors</code>" and
+ <var>name</var>/<var>value</var> is not a <a>CORS-safelisted request-header</a>, then return.
 
  <li><p>Otherwise, if <a for=Headers>guard</a> is
  "<code>response</code>" and <var>name</var> is a
@@ -4672,7 +4633,8 @@ method, when invoked, must run these steps:
  <var>name</var>/<var>value</var> in
  <a for=Headers>header list</a>.
 
- <li><p><a for=Headers>Unprivilege</a> <a>context object</a>.
+ <li><p>If <a for=Headers>guard</a> is "<code>request-no-cors</code>", then
+ <a for=Headers>remove privilaged request headers</a> from <a>context object</a>.
 </ol>
 
 <p>The <a>value pairs to iterate over</a> are the return value of running
@@ -5369,47 +5331,43 @@ constructor must run these steps:
 
  <li><p>Let <var>r</var> be a new {{Request}} object associated with <var>request</var>.
 
+ <li><p>If <var>signal</var> is not null, then make <var>r</var>'s <a for=Request>signal</a>
+ <a for=AbortSignal>follow</a> <var>signal</var>.
+
  <li><p>Set <var>r</var>'s <a for=Request>headers</a> to a new {{Headers}} object, whose
  <a for=Headers>header list</a> is <var>request</var>'s <a for=request>header list</a>, and
  <a for=Headers>guard</a> is "<code>request</code>".
 
- <li><p>If <var>signal</var> is not null, then make <var>r</var>'s <a for=Request>signal</a>
- <a for=AbortSignal>follow</a> <var>signal</var>.
-
- <li><p>Let <var>headers</var> be a copy of <var>r</var>'s <a for=Request>headers</a> and its
- associated <a for=Headers>header list</a>.
- <!-- it might contain a header that is no longer allowed per the mode change -->
-
- <li><p>If <var>init</var>'s <code>headers</code> member is present, set
- <var>headers</var> to <var>init</var>'s <code>headers</code> member.
-
- <li><p>Empty <var>r</var>'s <a for=Request>headers</a>'s <a for=Headers>header list</a>.
-
  <li>
-  <p>If <var>r</var>'s <a for=Request>request</a>'s
-  <a for=request>mode</a> is "<code>no-cors</code>", run these
-  substeps:
+  <p>If any of <var>init</var>'s members are present, then:
+
+  <p class=note>We need to sanitise the headers, as they might contain headers that are not allowed
+  by this mode. Otherwise, we can assume that the request headers were previously sanitised, or are
+  unmodified since creation by a privilaged API.
 
   <ol>
-   <li><p>If <var>r</var>'s <a for=Request>request</a>'s <a for=request>method</a> is not a
-   <a>CORS-safelisted method</a>, then <a>throw</a> a <code>TypeError</code>.
+   <li><p>Let <var>headers</var> be a copy of <var>r</var>'s <a for=Request>headers</a> and its
+   associated <a for=Headers>header list</a>.
 
-   <li><p>Set <var>r</var>'s <a for=Request>headers</a>'s <a for=Headers>guard</a> to
-   "<code>request-no-cors</code>".
+   <li><p>If <var>init</var>'s <code>headers</code> member is present, set
+   <var>headers</var> to <var>init</var>'s <code>headers</code> member.
 
-   <li><p>If <var>input</var> is a {{Request}} object, and none of <var>init</var>'s members are
-   present, and <var>input</var>'s <a for=Request>headers</a>'s
-   <a for=Headers>allow privileged no-cors headers flag</a> is set, then set <var>r</var>'s
-   <a for=Request>headers</a>'s <a for=Headers>allow privileged no-cors headers flag</a>.
+   <li><p>Empty <var>r</var>'s <a for=Request>headers</a>'s <a for=Headers>header list</a>.
+
+   <li><p>Set <var>clonedRequestObject</var>'s <a for=Request>headers</a> to a new {{Headers}}
+   object whose <a for=Headers>header list</a> is set to <var>clonedRequest</var>'s
+   <a for=Headers>header list</a>, and <a for=Headers>guard</a> is <a>context object</a>'s
+   <a for=Request>headers</a>' <a for=Headers>guard</a>.
+
+   <li><p>If <var>headers</var> is a <code>Headers</code> object, then <a for=list>for each</a>
+   <var>header</var> in its <a for=Headers>header list</a>, <a for=Headers>append</a>
+   <var>header</var>'s <a for=header>name</a>/<var>header</var>'s <a for=header>value</a> to
+   <var>r</var>'s {{Headers}} object.
+
+   <li><p>Otherwise, <a for=Headers>fill</a> <var>r</var>'s {{Headers}} object with
+   <var>headers</var>.
   </ol>
-
- <li><p>If <var>headers</var> is a <code>Headers</code> object, then <a for=list>for each</a>
- <var>header</var> in its <a for=Headers>header list</a>, <a for=Headers>append</a>
- <var>header</var>'s <a for=header>name</a>/<var>header</var>'s <a for=header>value</a> to
- <var>r</var>'s {{Headers}} object.
-
- <li><p>Otherwise, <a for=Headers>fill</a> <var>r</var>'s {{Headers}} object with
- <var>headers</var>.
+ </li>
 
  <li><p>Let <var>inputBody</var> be <var>input</var>'s
  <a for=Request>request</a>'s <a for=request>body</a>
@@ -5569,9 +5527,6 @@ run these steps:
 
    <li><p><a for=Headers>guard</a> is <a>context object</a>'s <a for=Request>headers</a>'s
    <a for=Headers>guard</a>.
-
-   <li><p><a for=Headers>allow privileged no-cors headers flag</a> is set if <a>context object</a>'s
-   <a for=Request>headers</a>'s <a for=Headers>allow privileged no-cors headers flag</a> is set.
   </ul>
  </li>
 
