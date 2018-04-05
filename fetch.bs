@@ -446,7 +446,7 @@ documented in <a href=#cors-protocol-exceptions>CORS protocol exceptions</a>.
 <p>A <dfn export>CORS non-wildcard request-header name</dfn> is a <a>byte-case-insensitive</a> match
 for `<code>Authorization</code>`.
 
-<p>A <dfn export>privileged request-header name</dfn> is a <a for=/>header</a>
+<p>A <dfn export>privileged no-cors request-header name</dfn> is a <a for=/>header</a>
 <a for=header>name</a> that is a <a>byte-case-insensitive</a> match for one of
 
 <ul class=brief>
@@ -4513,7 +4513,7 @@ objects.</span>
  <a for=Headers>header list</a>.
 
  <li><p>If <var>headers</var>'s <a for=Headers>guard</a> is "<code>request-no-cors</code>", then
- <a for=Headers>remove privilaged request headers</a> from <var>headers</var>.
+ <a for=Headers>remove privileged no-cors request headers</a> from <var>headers</var>.
 </ol>
 
 <p>To <dfn export for=Headers id=concept-headers-fill>fill</dfn> a
@@ -4539,7 +4539,7 @@ run these steps:
 </ol>
 
 <p>To
-<dfn for=Headers id=concept-headers-remove-privilaged-request-headers>remove privilaged request headers</dfn>
+<dfn for=Headers id=concept-headers-remove-privileged-no-cors-request-headers>remove privileged no-cors request headers</dfn>
 from a {{Headers}} object (<var>headers</var>), run these steps:
 
 <ol>
@@ -4547,8 +4547,9 @@ from a {{Headers}} object (<var>headers</var>), run these steps:
  <a for=Headers>header list</a>:
 
  <ol>
-  <li><p>If <var>header</var>'s <a for=header>name</a> is a <a>privileged request-header name</a>,
-  then remove <var>header</var> from <var>headers</var>'s <a for=Headers>header list</a>.
+  <li><p>If <var>header</var>'s <a for=header>name</a> is a
+  <a>privileged no-cors request-header name</a>, then remove <var>header</var> from
+  <var>headers</var>'s <a for=Headers>header list</a>.
  </ol>
 </ol>
 
@@ -4588,7 +4589,7 @@ method, when invoked, must run these steps:
 
  <li><p>Otherwise, if <a for=Headers>guard</a> is "<code>request-no-cors</code>" and
  <var>name</var>/`<code>invalid</code>` is not a <a>CORS-safelisted request-header</a>, and
- <var>name</var> is not a <a>privileged request-header name</a>, then return.
+ <var>name</var> is not a <a>privileged no-cors request-header name</a>, then return.
 
   <p class=note>`<code>invalid</code>` is used because
   <a method for=Headers><code>delete()</code></a> is not passed a value as argument.
@@ -4601,7 +4602,7 @@ method, when invoked, must run these steps:
  <a for=Headers>header list</a>.
 
  <li><p>If <a for=Headers>guard</a> is "<code>request-no-cors</code>", then
- <a for=Headers>remove privilaged request headers</a> from <a>context object</a>.
+ <a for=Headers>remove privileged no-cors request headers</a> from <a>context object</a>.
 </ol>
 
 <p>The <dfn export for=Headers method><code>get(<var>name</var>)</code></dfn> method, when
@@ -4658,7 +4659,7 @@ method, when invoked, must run these steps:
  <a for=Headers>header list</a>.
 
  <li><p>If <a for=Headers>guard</a> is "<code>request-no-cors</code>", then
- <a for=Headers>remove privilaged request headers</a> from <a>context object</a>.
+ <a for=Headers>remove privileged no-cors request headers</a> from <a>context object</a>.
 </ol>
 
 <p>The <a>value pairs to iterate over</a> are the return value of running
@@ -5367,7 +5368,7 @@ constructor must run these steps:
 
   <p class=note>We need to sanitise the headers, as they might contain headers that are not allowed
   by this mode. Otherwise, we can assume that the request headers were previously sanitised, or are
-  unmodified since creation by a privilaged API.
+  unmodified since creation by a privileged API.
 
   <ol>
    <li><p>Let <var>headers</var> be a copy of <var>r</var>'s <a for=Request>headers</a> and its
