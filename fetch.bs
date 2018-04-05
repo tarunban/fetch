@@ -3224,8 +3224,6 @@ optional <i>CORS flag</i> and <i>CORS-preflight flag</i>, run these steps:
     <!-- not resetting actualResponse since it's no longer used anyway -->
   </ol>
 
- <li><p>If <var>request</var>'s <a for=request>header list</a>
-
  <li>
   <p>If <var>response</var>'s <a for=response>status</a> is <code>206</code>,
   and <var>response</var>'s <a for=response>range requested flag</a> is set, and
