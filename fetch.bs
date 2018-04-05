@@ -1394,6 +1394,10 @@ specified. [[!CSP]]
 `<a http-header><code>Access-Control-Expose-Headers</code></a>` header. This list is used by a
 <a>CORS filtered response</a> to determine which headers to expose.
 
+<p>A <a for=/>response</a> has an associated
+<dfn for=response id=concept-response-range-requested-flag>range requested flag</dfn>, which is
+initially unset.
+
 <p>A <a for=/>response</a> can have an associated
 <dfn export for=response id=concept-response-location-url>location URL</dfn> (null, failure, or a
 <a for=/>URL</a>). Unless specified otherwise, <a for=/>response</a> has no
@@ -3220,6 +3224,29 @@ optional <i>CORS flag</i> and <i>CORS-preflight flag</i>, run these steps:
     <!-- not resetting actualResponse since it's no longer used anyway -->
   </ol>
 
+ <li><p>If <var>request</var>'s <a for=request>header list</a>
+
+ <li>
+  <p>If <var>response</var>'s <a for=response>status</a> is <code>206</code>,
+  and <var>response</var>'s <a for=response>range requested flag</a> is set, and
+  <var>request</var>'s <a for=request>header list</a> does not <a for="header list">contain</a>
+  "<code>`Range`</code>", then return a <a>network error</a>.
+
+  <div class=note>
+   <p>Traditionally, APIs accept a ranged response even if a range wasn't requested. However, we
+   need to prevent a partial response from an earlier ranged request being provided to an API that
+   didn't make a range request.
+
+   <p>Example attack: A media element is used to request a range of a cross-origin HTML resource.
+   Although this is invalid media, a reference to a clone of the response can be retained in a
+   service worker. This can later be used as the response to a script element's fetch. If the
+   partial response is valid JavaScript (even though the whole resource is not), executing it would
+   leak private data.
+
+   <p>The above step prevents this attack.
+  </div>
+ </li>
+
  <li><p>Return <var>response</var>. <span class="note no-backref">Typically
  <var>actualResponse</var>'s <a for=response>body</a>'s
  <a for=body>stream</a> is still being enqueued to after returning.</span>
@@ -3683,9 +3710,8 @@ Range Requests</cite>. [[HTTP-RANGE]] However, this is not widely supported by b
     </ol>
   </ol>
 
- <li><p>If <var>response</var>'s <a for=response>status</a> is <code>206</code>, and
- <var>httpRequest</var>'s <a for=request>header list</a> does not <a for="header list">contain</a>
- "<code>`Range`</code>", return a <a>network error</a>.
+ <li><p>If <var>httpRequest</var>'s <a for=request>header list</a> <a for="header list">contains</a>
+ "<code>`Range`</code>", then set <var>response</var>'s <a for=response>range requested flag</a>.
 
  <li>
   <p>If <var>response</var>'s <a for=response>status</a> is <code>401</code>, <i>CORS flag</i>
