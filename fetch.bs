@@ -1308,8 +1308,8 @@ for=/>request</a> <var>request</var>, with an integer <var>first</var>, and an o
  <var>request</var>'s <a for=request>header list</a>.
 </ol>
 
-<p class=note>Ranges are inlusive. A range where <var>first</var> is 0 and <var>last</var> is
-500, is 501 bytes.
+<p class=note>Ranges are inclusive. A range where <var>first</var> is 0 and <var>last</var> is
+500 is a range of 501 bytes.
 
 <h4 id=responses>Responses</h4>
 
