@@ -4623,7 +4623,7 @@ method, when invoked, must run these steps:
  return.
 
  <li><p>Otherwise, if <a for=Headers>guard</a> is "<code>request-no-cors</code>" and
- <var>name</var>/<var>value</var> is not a <a>CORS-safelisted request-header</a>, then return.
+ <var>name</var>/<var>value</var> is not a <a>CORS-safelisted request-header</a>, return.
 
  <li><p>Otherwise, if <a for=Headers>guard</a> is
  "<code>response</code>" and <var>name</var> is a
@@ -5354,10 +5354,18 @@ constructor must run these steps:
 
    <li><p>Empty <var>r</var>'s <a for=Request>headers</a>'s <a for=Headers>header list</a>.
 
-   <li><p>Set <var>clonedRequestObject</var>'s <a for=Request>headers</a> to a new {{Headers}}
-   object whose <a for=Headers>header list</a> is set to <var>clonedRequest</var>'s
-   <a for=Headers>header list</a>, and <a for=Headers>guard</a> is <a>context object</a>'s
-   <a for=Request>headers</a>' <a for=Headers>guard</a>.
+   <li>
+    <p>If <var>r</var>'s <a for=Request>request</a>'s <a for=request>mode</a> is
+    "<code>no-cors</code>", then:
+
+    <ol>
+     <li><p>If <var>r</var>'s <a for=Request>request</a>'s <a for=request>method</a> is not a
+     <a>CORS-safelisted method</a>, then <a>throw</a> a <code>TypeError</code>.
+
+     <li><p>Set <var>r</var>'s <a for=Request>headers</a>'s <a for=Headers>guard</a> to
+     "<code>request-no-cors</code>".
+    </ol>
+   </li>
 
    <li><p>If <var>headers</var> is a <code>Headers</code> object, then <a for=list>for each</a>
    <var>header</var> in its <a for=Headers>header list</a>, <a for=Headers>append</a>
