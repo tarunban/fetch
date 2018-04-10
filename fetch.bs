@@ -453,9 +453,12 @@ for `<code>Authorization</code>`.
  <li>`<code>Range</code>`
 </ul>
 
-<p class="note no-backref">These are headers that <span class=allow-2119>may</span> be set by
-privileged APIs, and will be preserved if their associated request object is copied, but will be
-removed if the request is modified in any way.
+<div class="note no-backref">
+ <p>These are headers that can be set by privileged APIs, and will be preserved if their associated
+ request object is copied, but will be removed if the request is modified in any way.
+
+ <p>A helper is provided to <a for=request>add a range header</a> to a particular request.
+</div>
 
 <p>A <dfn export>CORS-safelisted response-header name</dfn>, given a
 <a for=response>CORS-exposed header-name list</a> <var>list</var>, is a <a for=/>header</a>
@@ -1297,19 +1300,19 @@ for=/>request</a> <var>request</var>, with an integer <var>first</var>, and an o
 <ol>
  <li><p>Let <var>rangeValue</var> be `<code>bytes </code>`.
 
- <li><p><a>Encode</a> <var>first</var> and append the result to <var>rangeValue</var>.
+ <li><p><a>UTF-8 encode</a> <var>first</var> and append the result to <var>rangeValue</var>.
 
  <li><p>Append `<code>-</code>` to <var>rangeValue</var>.
 
- <li><p>If <var>last</var> is provided, <a>encode</a> it and append the result to
+ <li><p>If <var>last</var> is provided, then <a>UTF-8 encode</a> it and append the result to
  <var>rangeValue</var>.
 
  <li><p><a for="header list">Append</a> `<code>Range</code>`/<var>rangeValue</var> to
  <var>request</var>'s <a for=request>header list</a>.
 </ol>
 
-<p class=note>Ranges are inclusive. A range where <var>first</var> is 0 and <var>last</var> is
-500 is a range of 501 bytes.
+<p class=note>A range header denotes an inclusive byte range. There a range header where
+<var>first</var> is 0 and <var>last</var> is 500, is a range of 501 bytes.
 
 <h4 id=responses>Responses</h4>
 
@@ -2852,6 +2855,35 @@ with a <i>CORS flag</i> and <i>recursive flag</i>, run these steps:
   </ul>
 
  <li>
+  <p>If <var>internalResponse</var>'s <a for=response>status</a> is <code>206</code>,
+  <var>response</var>'s <a for=response>type</a> is "<code>opaque</code>",
+  <var>internalResponse</var>'s <a for=response>range requested flag</a> is set, and
+  <var>request</var>'s <a for=request>header list</a> does not <a for="header list">contain</a>
+  `<code>Range</code>`, then:
+
+  <ol>
+   <li><p>Set <var>internalResponse</var> to a new <a for=/>response</a>.
+
+   <li><p>Set <var>response</var>'s <a>internal response</a> to <var>internalResponse</var>.
+  </ol>
+
+  <div class=note>
+   <p>Traditionally, APIs accept a ranged response even if a range wasn't requested. However, we
+   need to prevent a partial response from an earlier ranged request being provided to an API that
+   didn't make a range request.
+
+   <p>The above step prevents the following attack attack:
+
+   <p>A media element is used to request a range of a cross-origin HTML resource. Although this is
+   invalid media, a reference to a clone of the response can be retained in a service worker. This
+   can later be used as the response to a script element's fetch. If the partial response is valid
+   JavaScript (even though the whole resource is not), executing it would leak private data.
+
+   <p>The response is replaced with an "ok" response to avoid triggering error events or rejections
+   in APIs, as this would also leak information about the response.
+  </div>
+
+ <li>
   <p>If <var>response</var> is not a <a>network error</a> and
   either <var>request</var>'s <a for=request>method</a> is
   `<code>HEAD</code>` or `<code>CONNECT</code>`, or <var>internalResponse</var>'s
@@ -3223,27 +3255,6 @@ optional <i>CORS flag</i> and <i>CORS-preflight flag</i>, run these steps:
     </dl>
     <!-- not resetting actualResponse since it's no longer used anyway -->
   </ol>
-
- <li>
-  <p>If <var>response</var>'s <a for=response>status</a> is <code>206</code>,
-  and <var>response</var>'s <a for=response>range requested flag</a> is set, and
-  <var>request</var>'s <a for=request>header list</a> does not <a for="header list">contain</a>
-  "<code>`Range`</code>", then return a <a>network error</a>.
-
-  <div class=note>
-   <p>Traditionally, APIs accept a ranged response even if a range wasn't requested. However, we
-   need to prevent a partial response from an earlier ranged request being provided to an API that
-   didn't make a range request.
-
-   <p>Example attack: A media element is used to request a range of a cross-origin HTML resource.
-   Although this is invalid media, a reference to a clone of the response can be retained in a
-   service worker. This can later be used as the response to a script element's fetch. If the
-   partial response is valid JavaScript (even though the whole resource is not), executing it would
-   leak private data.
-
-   <p>The above step prevents this attack.
-  </div>
- </li>
 
  <li><p>Return <var>response</var>. <span class="note no-backref">Typically
  <var>actualResponse</var>'s <a for=response>body</a>'s
@@ -3709,7 +3720,7 @@ Range Requests</cite>. [[HTTP-RANGE]] However, this is not widely supported by b
   </ol>
 
  <li><p>If <var>httpRequest</var>'s <a for=request>header list</a> <a for="header list">contains</a>
- "<code>`Range`</code>", then set <var>response</var>'s <a for=response>range requested flag</a>.
+ `<code>Range</code>`, then set <var>response</var>'s <a for=response>range requested flag</a>.
 
  <li>
   <p>If <var>response</var>'s <a for=response>status</a> is <code>401</code>, <i>CORS flag</i>
@@ -4502,7 +4513,7 @@ objects.</span>
  return.
 
  <li><p>Otherwise, if <a for=Headers>guard</a> is "<code>request-no-cors</code>" and
- <var>name</var>/<var>value</var> is not a <a>CORS-safelisted request-header</a>, return.
+ <var>name</var>/<var>value</var> is not a <a>CORS-safelisted request-header</a>, then return.
 
  <li><p>Otherwise, if <a for=Headers>guard</a> is
  "<code>response</code>" and <var>name</var> is a
@@ -4543,13 +4554,12 @@ run these steps:
 from a {{Headers}} object (<var>headers</var>), run these steps:
 
 <ol>
- <li><p><a for="list">For each</a> <var>header</var> of <var>headers</var>'s
- <a for=Headers>header list</a>:
+ <li><p><a for="list">For each</a> <var>headerName</var> of
+ <a>privileged no-cors request-header names</a>:
 
  <ol>
-  <li><p>If <var>header</var>'s <a for=header>name</a> is a
-  <a>privileged no-cors request-header name</a>, then remove <var>header</var> from
-  <var>headers</var>'s <a for=Headers>header list</a>.
+  <li><p><a for="header list">Delete</a> <var>headerName</var> from <var>headers</var>'s
+  <a for=Headers>header list</a>.
  </ol>
 </ol>
 
@@ -4587,7 +4597,7 @@ method, when invoked, must run these steps:
  "<code>request</code>" and <var>name</var> is a <a>forbidden header name</a>,
  return.
 
- <li><p>Otherwise, if <a for=Headers>guard</a> is "<code>request-no-cors</code>" and
+ <li><p>Otherwise, if <a for=Headers>guard</a> is "<code>request-no-cors</code>",
  <var>name</var>/`<code>invalid</code>` is not a <a>CORS-safelisted request-header</a>, and
  <var>name</var> is not a <a>privileged no-cors request-header name</a>, then return.
 
@@ -4598,11 +4608,14 @@ method, when invoked, must run these steps:
  "<code>response</code>" and <var>name</var> is a
  <a>forbidden response-header name</a>, return.
 
+ <li><p>If <a for=Headers>header list</a> does not <a for="header list">contain</a> <var>name</var>,
+ then return.
+
  <li><p><a for="header list">Delete</a> <var>name</var> from
  <a for=Headers>header list</a>.
 
  <li><p>If <a for=Headers>guard</a> is "<code>request-no-cors</code>", then
- <a for=Headers>remove privileged no-cors request headers</a> from <a>context object</a>.
+ <a for=Headers>remove privileged no-cors request headers</a> from the <a>context object</a>.
 </ol>
 
 <p>The <dfn export for=Headers method><code>get(<var>name</var>)</code></dfn> method, when
@@ -4648,7 +4661,7 @@ method, when invoked, must run these steps:
  return.
 
  <li><p>Otherwise, if <a for=Headers>guard</a> is "<code>request-no-cors</code>" and
- <var>name</var>/<var>value</var> is not a <a>CORS-safelisted request-header</a>, return.
+ <var>name</var>/<var>value</var> is not a <a>CORS-safelisted request-header</a>, then return.
 
  <li><p>Otherwise, if <a for=Headers>guard</a> is
  "<code>response</code>" and <var>name</var> is a
@@ -4659,7 +4672,7 @@ method, when invoked, must run these steps:
  <a for=Headers>header list</a>.
 
  <li><p>If <a for=Headers>guard</a> is "<code>request-no-cors</code>", then
- <a for=Headers>remove privileged no-cors request headers</a> from <a>context object</a>.
+ <a for=Headers>remove privileged no-cors request headers</a> from the <a>context object</a>.
 </ol>
 
 <p>The <a>value pairs to iterate over</a> are the return value of running
@@ -5198,39 +5211,50 @@ constructor must run these steps:
   <p>Set <var>request</var> to a new <a for=/>request</a> with the following properties:
 
   <dl>
-   <dt><a for=request>url</a> <dd><var>request</var>'s <a for=request>current url</a>.
+   <dt><a for=request>url</a>
+   <dd><var>request</var>'s <a for=request>current url</a>.
 
-   <dt><a for=request>method</a> <dd><var>request</var>'s <a for=request>method</a>.
+   <dt><a for=request>method</a>
+   <dd><var>request</var>'s <a for=request>method</a>.
 
-   <dt><a for=request>header list</a> <dd>A copy of <var>request</var>'s
-   <a for=request>header list</a>.
+   <dt><a for=request>header list</a>
+   <dd>A copy of <var>request</var>'s <a for=request>header list</a>.
 
-   <dt><a>unsafe-request flag</a> <dd>Set.
+   <dt><a>unsafe-request flag</a>
+   <dd>Set.
 
-   <dt><a for=request>client</a> <dd><a>Current settings object</a>.
+   <dt><a for=request>client</a>
+   <dd><a>Current settings object</a>.
 
-   <dt><a for=request>window</a> <dd><var>window</var>.
+   <dt><a for=request>window</a>
+   <dd><var>window</var>.
 
-   <dt><a for=request>origin</a> <dd>"<code>client</code>".
+   <dt><a for=request>origin</a>
+   <dd>"<code>client</code>".
 
-   <dt><a for=request>referrer</a> <dd><var>request</var>'s <a for=request>referrer</a>.
+   <dt><a for=request>referrer</a>
+   <dd><var>request</var>'s <a for=request>referrer</a>.
 
-   <dt><a for=request>referrer policy</a> <dd><var>request</var>'s
-   <a for=request>referrer policy</a>.
+   <dt><a for=request>referrer policy</a>
+   <dd><var>request</var>'s <a for=request>referrer policy</a>.
 
-   <dt><a for=request>mode</a> <dd><var>request</var>'s <a for=request>mode</a>.
+   <dt><a for=request>mode</a>
+   <dd><var>request</var>'s <a for=request>mode</a>.
 
-   <dt><a for=request>credentials mode</a> <dd><var>request</var>'s
-   <a for=request>credentials mode</a>.
+   <dt><a for=request>credentials mode</a>
+   <dd><var>request</var>'s <a for=request>credentials mode</a>.
 
-   <dt><a for=request>cache mode</a> <dd><var>request</var>'s <a for=request>cache mode</a>.
+   <dt><a for=request>cache mode</a>
+   <dd><var>request</var>'s <a for=request>cache mode</a>.
 
-   <dt><a for=request>redirect mode</a> <dd><var>request</var>'s <a for=request>redirect mode</a>.
+   <dt><a for=request>redirect mode</a>
+   <dd><var>request</var>'s <a for=request>redirect mode</a>.
 
-   <dt><a for=request>integrity metadata</a> <dd><var>request</var>'s
-   <a for=request>integrity metadata</a>.
+   <dt><a for=request>integrity metadata</a>
+   <dd><var>request</var>'s <a for=request>integrity metadata</a>.
 
-   <dt><a>keepalive flag</a> <dd><var>request</var>'s <a>keepalive flag</a>.
+   <dt><a>keepalive flag</a>
+   <dd><var>request</var>'s <a>keepalive flag</a>.
   </dl>
 
  <li>
@@ -5244,18 +5268,15 @@ constructor must run these steps:
    <li><p>Set <var>request</var>'s <a for=request>referrer</a> to
    "<code>client</code>"
 
-   <li>
-    <p>Set <var>request</var>'s <a for=request>referrer policy</a> to the empty string.
-
-    <p class=note>This is done to ensure that when a service worker "redirects" a request, e.g.,
-    from an image in a cross-origin stylesheet, and makes modifications, it no longer appears to
-    come from the original source (i.e., the cross-origin stylesheet), but instead from the service
-    worker that "redirected" the request. This is important as the original source might not even be
-    able to generate the same kind of requests as the service worker. Services that trust the
-    original source could therefore be exploited were this not done, although that is somewhat
-    farfetched.
-   </li>
+   <li><p>Set <var>request</var>'s <a for=request>referrer policy</a> to the empty string.
   </ol>
+
+  <p class=note>This is done to ensure that when a service worker "redirects" a request, e.g., from
+  an image in a cross-origin style sheet, and makes modifications, it no longer appears to come from
+  the original source (i.e., the cross-origin style sheet), but instead from the service worker that
+  "redirected" the request. This is important as the original source might not even be able to
+  generate the same kind of requests as the service worker. Services that trust the original source
+  could therefore be exploited were this not done, although that is somewhat farfetched.
 
  <li>
   <p>If <var>init</var>'s <code>referrer</code> member is present, run these
@@ -5552,15 +5573,15 @@ run these steps:
 
  <li>
   <p>Set <var>clonedRequestObject</var>'s <a for=Request>headers</a> to a new {{Headers}} object
-  whose:
+  with the following properties:
 
-  <ul>
-   <li><p><a for=Headers>header list</a> is set to <var>clonedRequest</var>'s
-   <a for=Headers>header list</a>.
+  <dl>
+   <dt><a for=Headers>header list</a>
+   <dd><var>clonedRequest</var>'s <a for=Headers>header list</a>.
 
-   <li><p><a for=Headers>guard</a> is <a>context object</a>'s <a for=Request>headers</a>'s
-   <a for=Headers>guard</a>.
-  </ul>
+   <dt><a for=Headers>guard</a>
+   <dd><a>context object</a>'s <a for=Request>headers</a>'s <a for=Headers>guard</a>.
+  </dl>
  </li>
 
  <li><p>Make <var>clonedRequestObject</var>'s <a for=Request>signal</a>
@@ -5784,7 +5805,7 @@ run these steps:
 
  <li><p>Set <var>clonedResponseObject</var>'s <a for=Request>headers</a> to a new {{Headers}} object
  whose <a for=Headers>header list</a> is set to <var>clonedResponse</var>'s
- <a for=Headers>header list</a>, and <a for=Headers>guard</a> is <a>context object</a>'s
+ <a for=Headers>header list</a>, and <a for=Headers>guard</a> is the <a>context object</a>'s
  <a for=Response>headers</a>'s <a for=Headers>guard</a>.
 
  <li><p>Upon fulfillment of <a>context object</a>'s <a for=Response>trailer promise</a>, resolve
